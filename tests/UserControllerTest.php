@@ -4,24 +4,26 @@ namespace Tests;
 
 use App\Controllers\UserController;
 use App\Models\User;
-use App\Store\Session;
+use App\Store\UserStore;
 use PHPUnit\Framework\TestCase;
 
 class UserControllerTest extends TestCase
 {
-    protected static $session;
+
     protected $userController;
+
+    protected static $userStore;
 
     public static function setUpBeforeClass(): void
     {
-        // get the session instance
-        self::$session = Session::instance();
+        // get the user store instance
+        self::$userStore = UserStore::instance();
     }
 
     protected function setUp(): void
     {
-        // Clear the session before each test
-        self::$session->clear();
+        // Clear the users data before each test
+        self::$userStore->destroyAll();
 
         // Instantiate the UserController
         $this->userController = new UserController();
@@ -48,12 +50,9 @@ class UserControllerTest extends TestCase
         $this->assertEquals('1980-01-01', $user['dateOfBirth']);
         $this->assertEquals(45, $user['age']); // Should be 45 based on the birthdate
 
-        // Ensure the user was stored in session
-        $usersData = self::$session->get('users', []);
-        $userInSession = array_find($usersData, function ($userData) use ($data) {
-            return $userData['email'] === $data['email'];
-        });
-        $this->assertNotNull($userInSession);
+        // Ensure the user was stored
+        $userInStore = self::$userStore->find($user['id']);
+        $this->assertNotNull($userInStore);
     }
 
     public function testCreateUserInvalid()

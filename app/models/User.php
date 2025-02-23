@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Store\Session;
+use App\Store\UserStore;
 
 class User
 {
@@ -11,6 +11,8 @@ class User
     public $lastName;
     public $email;
     public $dateOfBirth;
+
+    private static $store = null;
 
     public function __construct($data = [])
     {
@@ -21,26 +23,17 @@ class User
         $this->dateOfBirth = $data['dateOfBirth'];
     }
 
-    public static function getData()
-    {
-        $session = Session::instance();
-        return $session->get('users', []);
-    }
-
-    public static function setData(array $data)
-    {
-        $session = Session::instance();
-        return $session->set('users', $data);
+    public static function store() {
+        if (self::$store === null) {
+            self::$store = UserStore::instance();
+        }
+        return self::$store;
     }
 
     public static function ids()
     {
-        $users = self::getData();
+        $users = self::store()->all();
         return array_column($users, 'id');
-    }
-
-    public static function indexById(int $id) {
-        return array_search($id, self::ids());
     }
 
     public static function lastId() 
@@ -54,57 +47,40 @@ class User
         return self::lastId() + 1;
     }
 
-    // Create user
     public static function create(array $data)
     {
         $userId = self::nextId();
         $data['id'] = $userId;
-        $usersData = self::getData();
-        $usersData[] = $data;
-        self::setData($usersData);
-        return self::find($userId);
+        self::store()->createOrUpdate($data);
+        return new User($data);
     }
 
-    // Get all users
     public static function all($asArray = false)
     {
-        $usersData = self::getData();
         return array_map(function ($user) use ($asArray) {
             $user = new User($user);
             if ($asArray) {
                 return $user->toArray();
             }
             return $user;
-        }, $usersData);
+        }, self::store()->all());
     }
 
-    // Find one user by ID
     public static function find(int $id)
     {
-        $usersData = self::getData();
-        $userData = array_find($usersData, function ($user) use ($id) {
-            return $user['id'] === intval($id);
-        });
+        $userData = self::store()->find($id);
         return $userData ? new User($userData) : null;
     }
 
-    // Update user
     public static function update(array $data)
     {
-        $usersData = self::getData();
-        $userIdx = self::indexById($data['id']);
-        $usersData[$userIdx] = $data;
-        self::setData($usersData);
+        self::store()->createOrUpdate($data);
         return new User($data);
     }
 
-    // Delete user
     public static function destroy(int $id)
     {
-        $usersData = self::getData();
-        $userIdx = self::indexById($id);
-        array_splice($usersData, $userIdx, 1);
-        self::setData($usersData);
+        self::store()->destroy($id);
         return $id;
     }
 
@@ -120,8 +96,7 @@ class User
     // Validate the user's age (18+)
     public static function isAgeValid(string $dateOfBirth)
     {
-        $age = self::calculateAge($dateOfBirth);
-        return $age >= 18;
+        return self::calculateAge($dateOfBirth) >= 18;
     }
 
     // Calculate age based on dateOfBirth

@@ -4,23 +4,13 @@ namespace App\Store;
 
 class Session
 {
-    private static $instance = null;
 
-    // Start the session if it hasn't been started
     public function __construct()
-    {
+    {   
+        // start the session if it hasn't been started
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
-    }
-
-    public static function instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new Session();
-        }
-
-        return self::$instance;
     }
 
     // Store a value in the session
